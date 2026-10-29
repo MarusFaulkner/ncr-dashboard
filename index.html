@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NCR Dashboard | Quality Management</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f172a;--surface:#1e293b;--surface2:#263347;--surface3:#1a2840;
+  --border:rgba(148,163,184,.1);--border-s:rgba(148,163,184,.18);
+  --text:#f1f5f9;--text2:#94a3b8;--text3:#64748b;
+  --blue:#3b82f6;--blue-h:#2563eb;--blue-l:rgba(59,130,246,.08);
+  --green:#22c55e;--amber:#f59e0b;--red:#ef4444;--red-d:#dc2626;
+  --teal:#14b8a6;--purple:#a78bfa;--orange:#f97316;
+  --r:10px;--rl:14px;
+}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;font-size:14px;line-height:1.5;min-height:100vh}
+.app{max-width:1440px;margin:0 auto;padding:28px 20px}
+
+/* HEADER */
+.hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;flex-wrap:wrap;gap:12px}
+.hdr-left{display:flex;align-items:center;gap:14px}
+.hdr-logo{width:42px;height:42px;background:linear-gradient(135deg,#1d4ed8,#3b82f6);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.hdr-left h1{font-size:20px;font-weight:700;margin-bottom:2px}
+.hdr-left p{font-size:12px;color:var(--text3)}
+.hdr-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.qms-badge{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.22);color:#60a5fa;padding:3px 10px;border-radius:20px}
+
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--r);border:1px solid var(--border-s);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;white-space:nowrap;font-family:inherit;text-decoration:none}
+.btn-primary{background:var(--blue);border-color:var(--blue);color:#fff}
+.btn-primary:hover{background:var(--blue-h);border-color:var(--blue-h)}
+.btn-ghost{background:transparent;color:var(--text2)}
+.btn-ghost:hover{background:var(--surface2);color:var(--text)}
+.btn-danger{background:rgba(239,68,68,.08);border-color:rgba(239,68,68,.2);color:var(--red)}
+.btn-danger:hover{background:rgba(239,68,68,.15)}
+
+/* STATS */
+.stats{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:24px}
+@media(max-width:1100px){.stats{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:560px){.stats{grid-template-columns:repeat(2,1fr)}}
+.sc{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:16px 18px;position:relative;overflow:hidden}
+.sc::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:var(--rl) var(--rl) 0 0}
+.sc.s-total::before{background:var(--blue)}
+.sc.s-open::before{background:var(--red)}
+.sc.s-prog::before{background:var(--amber)}
+.sc.s-closed::before{background:var(--green)}
+.sc.s-crit::before{background:var(--red-d)}
+.sc.s-overdue::before{background:var(--orange)}
+.sc-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:8px}
+.sc-val{font-size:30px;font-weight:700;line-height:1}
+.sc.s-open .sc-val{color:var(--red)}
+.sc.s-prog .sc-val{color:var(--amber)}
+.sc.s-closed .sc-val{color:var(--green)}
+.sc.s-crit .sc-val{color:var(--red-d)}
+.sc.s-overdue .sc-val{color:var(--orange)}
+.sc-alert{font-size:10px;font-weight:600;color:var(--red);margin-top:6px;display:none;animation:pulse-txt 1.5s ease-in-out infinite}
+.sc.is-alert{border-color:rgba(239,68,68,.4);box-shadow:0 0 0 1px rgba(239,68,68,.15),0 0 16px rgba(239,68,68,.08)}
+.sc.is-alert::before{background:var(--red);animation:pulse-bar 1.5s ease-in-out infinite}
+@keyframes pulse-txt{0%,100%{opacity:1}50%{opacity:.5}}
+@keyframes pulse-bar{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* CHARTS */
+.charts{display:grid;grid-template-columns:280px 1fr;gap:16px;margin-bottom:24px}
+@media(max-width:800px){.charts{grid-template-columns:1fr}}
+.cc{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:20px}
+.cc-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:16px}
+.ch-wrap{position:relative}
+.ch-wrap.donut{height:190px}
+.ch-wrap.bar{height:210px}
+
+/* FILTERS */
+.filters{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.fcount{font-size:12px;color:var(--text3);margin-left:auto;white-space:nowrap}
+.sw{position:relative;flex:1;min-width:200px}
+.sw-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);pointer-events:none;width:14px;height:14px}
+.sw input{width:100%;padding:8px 12px 8px 34px;background:var(--surface);border:1px solid var(--border-s);border-radius:var(--r);color:var(--text);font-size:13px;outline:none;font-family:inherit;transition:border-color .15s}
+.sw input:focus{border-color:var(--blue)}
+.sw input::placeholder{color:var(--text3)}
+select{padding:8px 28px 8px 12px;background:var(--surface);border:1px solid var(--border-s);border-radius:var(--r);color:var(--text);font-size:13px;cursor:pointer;outline:none;appearance:none;font-family:inherit;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%2394a3b8' stroke-width='1.5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 9px center;transition:border-color .15s}
+select:focus{border-color:var(--blue)}
+select option{background:var(--surface)}
+
+/* TABLE */
+.tw{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;margin-bottom:24px}
+.ts{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:860px}
+thead tr{border-bottom:2px solid var(--border-s)}
+thead th{padding:11px 14px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);white-space:nowrap;user-select:none;cursor:pointer;transition:color .15s}
+thead th:hover{color:var(--text2)}
+thead th.sorted{color:var(--blue)}
+.si{margin-left:3px;font-size:11px;opacity:.5}
+thead th.sorted .si{opacity:1}
+tbody tr.data-row{border-bottom:1px solid var(--border);transition:background .1s;cursor:pointer}
+tbody tr.data-row:hover{background:var(--surface2)}
+tbody tr.data-row.is-exp{background:var(--surface2)}
+td{padding:11px 14px;color:var(--text2);vertical-align:middle}
+td.nid{font-weight:700;color:var(--text);font-family:'SF Mono',monospace;font-size:12px}
+td.comp{color:var(--text);font-weight:500;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* EXPANDABLE ROW */
+.exp-row td{padding:0}
+.exp-content{padding:16px 18px 18px;background:rgba(15,23,42,.5);border-top:1px solid var(--border-s)}
+.exp-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+@media(max-width:700px){.exp-grid{grid-template-columns:1fr}}
+.exp-section{background:var(--surface);border:1px solid var(--border-s);border-radius:10px;padding:12px 14px}
+.exp-section.full{grid-column:1/-1}
+.exp-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text3);margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.exp-label-dot{width:5px;height:5px;border-radius:50%}
+.exp-text{font-size:13px;color:var(--text2);line-height:1.65}
+.exp-text.mono{font-family:'SF Mono',monospace;font-size:12px;color:var(--teal)}
+.photo-ref{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#60a5fa;font-family:'SF Mono',monospace;background:rgba(59,130,246,.07);padding:4px 10px;border-radius:6px;border:1px solid rgba(59,130,246,.15)}
+.disp-pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:4px 10px;border-radius:6px}
+.disp-pending{background:rgba(100,116,139,.12);color:#64748b}
+.disp-accept{background:rgba(34,197,94,.1);color:#22c55e}
+.disp-rework{background:rgba(245,158,11,.1);color:#f59e0b}
+.disp-scrap{background:rgba(239,68,68,.1);color:#ef4444}
+.disp-return{background:rgba(167,139,250,.1);color:#a78bfa}
+.disp-deviation{background:rgba(20,184,166,.1);color:#14b8a6}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
+.b-open{background:rgba(239,68,68,.12);color:#ef4444}
+.b-prog{background:rgba(245,158,11,.12);color:#f59e0b}
+.b-closed{background:rgba(34,197,94,.12);color:#22c55e}
+.b-minor{background:rgba(96,165,250,.12);color:#60a5fa}
+.b-major{background:rgba(245,158,11,.12);color:#f59e0b}
+.b-critical{background:rgba(239,68,68,.14);color:#ef4444;border:1px solid rgba(239,68,68,.22)}
+.dp{display:inline-block;font-size:11px;font-weight:500;padding:2px 8px;border-radius:12px;background:var(--bg);color:var(--text3)}
+.dp.warn{background:rgba(245,158,11,.1);color:var(--amber)}
+.dp.aging{background:rgba(249,115,22,.12);color:var(--orange)}
+.dp.urg{background:rgba(239,68,68,.12);color:var(--red);font-weight:700}
+
+/* ACTIONS */
+.ab{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:6px;border:1px solid var(--border-s);background:transparent;color:var(--text3);cursor:pointer;transition:all .15s;font-size:14px;line-height:1}
+.ab:hover{color:var(--text);background:var(--surface2)}
+.ab.del:hover{color:var(--red);border-color:rgba(239,68,68,.4)}
+.empty{text-align:center;padding:52px 24px;color:var(--text3)}
+.empty-icon{font-size:40px;margin-bottom:14px}
+.empty-title{font-size:15px;font-weight:500;color:var(--text2);margin-bottom:4px}
+
+/* MODAL */
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px;opacity:0;pointer-events:none;transition:opacity .2s}
+.ov.open{opacity:1;pointer-events:auto}
+.modal{background:var(--surface);border:1px solid var(--border-s);border-radius:var(--rl);width:100%;max-width:600px;max-height:92vh;overflow-y:auto;transform:translateY(14px);transition:transform .2s;scrollbar-width:thin;scrollbar-color:var(--border-s) transparent}
+.ov.open .modal{transform:translateY(0)}
+.mh{position:sticky;top:0;background:var(--surface);display:flex;justify-content:space-between;align-items:center;padding:18px 24px 14px;border-bottom:1px solid var(--border);z-index:1}
+.mh-left h2{font-size:16px;font-weight:700;margin-bottom:2px}
+.mh-left p{font-size:11px;color:var(--text3)}
+.mc{background:none;border:none;color:var(--text3);cursor:pointer;font-size:22px;line-height:1;padding:2px}
+.mc:hover{color:var(--text)}
+.mb{padding:20px 24px}
+
+/* FORM SECTION DIVIDERS */
+.fsec{margin-bottom:18px}
+.fsec-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--blue);margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid rgba(59,130,246,.15);display:flex;align-items:center;gap:7px}
+.fsec-num{width:18px;height:18px;background:var(--blue);border-radius:50%;font-size:9px;font-weight:800;color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+
+.id-preview{background:rgba(59,130,246,.07);border:1px solid rgba(59,130,246,.15);border-radius:8px;padding:10px 14px;margin-bottom:18px;font-size:12px;color:var(--text2);display:flex;align-items:center;gap:8px}
+.id-preview strong{color:#60a5fa;font-family:'SF Mono',monospace}
+
+.fr{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.fr3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.fg{margin-bottom:12px}
+.fl{display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px}
+.fl .req{color:var(--red);margin-left:2px}
+.fc{width:100%;padding:8px 12px;background:var(--bg);border:1px solid var(--border-s);border-radius:var(--r);color:var(--text);font-size:13px;font-family:inherit;outline:none;transition:border-color .15s}
+.fc:focus{border-color:var(--blue)}
+.fc::placeholder{color:var(--text3)}
+textarea.fc{resize:vertical;min-height:72px;line-height:1.55}
+textarea.fc.tall{min-height:90px}
+select.fc{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%2394a3b8' stroke-width='1.5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 9px center;padding-right:28px;cursor:pointer;background-color:var(--bg)}
+select.fc option{background:var(--bg)}
+.fhint{font-size:10px;color:var(--text3);margin-top:4px;line-height:1.4}
+.ferr{font-size:11px;color:var(--red);margin-top:4px;display:none}
+.ferr.show{display:block}
+.mf{display:flex;justify-content:flex-end;gap:8px;padding:14px 24px 18px;border-top:1px solid var(--border)}
+
+/* TOAST */
+.toast-wrap{position:fixed;bottom:24px;right:24px;z-index:200;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{background:var(--surface2);border:1px solid var(--border-s);border-radius:var(--r);padding:11px 15px;font-size:13px;color:var(--text);min-width:220px;display:flex;align-items:center;gap:9px;animation:tin .25s ease}
+.toast.success{border-color:rgba(34,197,94,.3)}
+.toast.error{border-color:rgba(239,68,68,.3)}
+.tdot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.toast.success .tdot{background:var(--green)}
+.toast.error .tdot{background:var(--red)}
+@keyframes tin{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:translateX(0)}}
+
+/* FOOTER */
+.footer{text-align:center;padding:6px 0 20px;font-size:12px;color:var(--text3)}
+.footer a{color:var(--blue);text-decoration:none}
+.footer a:hover{text-decoration:underline}
+.footer-divider{margin:0 8px;opacity:.4}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- HEADER -->
+  <div class="hdr">
+    <div class="hdr-left">
+      <div class="hdr-logo">&#128269;</div>
+      <div>
+        <h1>NCR Dashboard</h1>
+        <p>Nonconformance Report Tracker &mdash; designed with ISO 9001:2015 concepts in mind</p>
+      </div>
+    </div>
+    <div class="hdr-actions">
+      <span class="qms-badge">ISO 9001:2015 Concepts</span>
+      <button class="btn btn-ghost" onclick="resetData()">&#8635; Reset Sample Data</button>
+      <button class="btn btn-ghost" onclick="exportCSV()">&#8595; Export CSV</button>
+      <button class="btn btn-primary" onclick="openModal()">+ Add NCR</button>
+    </div>
+  </div>
+
+  <!-- STAT CARDS -->
+  <div class="stats">
+    <div class="sc s-total"><div class="sc-label">Total NCRs</div><div class="sc-val" id="s-total">0</div></div>
+    <div class="sc s-open"><div class="sc-label">Open</div><div class="sc-val" id="s-open">0</div></div>
+    <div class="sc s-prog"><div class="sc-label">In Progress</div><div class="sc-val" id="s-prog">0</div></div>
+    <div class="sc s-closed"><div class="sc-label">Closed</div><div class="sc-val" id="s-closed">0</div></div>
+    <div class="sc s-overdue"><div class="sc-label">Overdue (&gt;30 days)</div><div class="sc-val" id="s-overdue">0</div></div>
+    <div class="sc s-crit" id="crit-card"><div class="sc-label">Critical Open</div><div class="sc-val" id="s-crit">0</div><div class="sc-alert" id="crit-alert">⚠ Requires attention</div></div>
+  </div>
+
+  <!-- CHARTS -->
+  <div class="charts">
+    <div class="cc">
+      <div class="cc-title">Status overview</div>
+      <div class="ch-wrap donut"><canvas id="donut-chart"></canvas></div>
+    </div>
+    <div class="cc">
+      <div class="cc-title">NCRs by month &mdash; severity trend</div>
+      <div class="ch-wrap bar"><canvas id="bar-chart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- FILTERS -->
+  <div class="filters">
+    <div class="sw">
+      <svg class="sw-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      <input type="text" id="search" placeholder="Search NCR #, component, sales order, description...">
+    </div>
+    <select id="status-filter">
+      <option value="all">All statuses</option>
+      <option value="Open">Open</option>
+      <option value="In Progress">In Progress</option>
+      <option value="Closed">Closed</option>
+    </select>
+    <select id="severity-filter">
+      <option value="all">All severities</option>
+      <option value="Minor">Minor</option>
+      <option value="Major">Major</option>
+      <option value="Critical">Critical</option>
+    </select>
+    <select id="disp-filter">
+      <option value="all">All dispositions</option>
+      <option value="Pending">Pending</option>
+      <option value="Accept As-Is">Accept As-Is</option>
+      <option value="Rework">Rework</option>
+      <option value="Scrap">Scrap</option>
+      <option value="Return to Vendor">Return to Vendor</option>
+      <option value="Use As-Is with Deviation">Use As-Is with Deviation</option>
+    </select>
+    <select id="owner-filter">
+      <option value="all">All assigned to</option>
+    </select>
+    <span class="fcount" id="fcount"></span>
+  </div>
+
+  <!-- TABLE -->
+  <div class="tw">
+    <div class="ts">
+      <table>
+        <thead>
+          <tr>
+            <th data-col="id" onclick="setSort('id')">NCR # <span class="si">&#8597;</span></th>
+            <th data-col="salesOrder" onclick="setSort('salesOrder')">Sales Order <span class="si">&#8597;</span></th>
+            <th data-col="component" onclick="setSort('component')">Component <span class="si">&#8597;</span></th>
+            <th data-col="drawingSpec" onclick="setSort('drawingSpec')">Drawing / Spec <span class="si">&#8597;</span></th>
+            <th data-col="severity" onclick="setSort('severity')">Severity <span class="si">&#8597;</span></th>
+            <th data-col="disposition" onclick="setSort('disposition')">Disposition <span class="si">&#8597;</span></th>
+            <th data-col="status" onclick="setSort('status')">Status <span class="si">&#8597;</span></th>
+            <th data-col="dateFound" onclick="setSort('dateFound')">Date Found <span class="si">&#8597;</span></th>
+            <th>Days Open</th>
+            <th data-col="assignedTo" onclick="setSort('assignedTo')">Assigned To <span class="si">&#8597;</span></th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="footer">
+    NCR Dashboard &mdash; designed with ISO 9001:2015 concepts in mind
+    <span class="footer-divider">|</span>
+    SQMH0020 Reference
+    <span class="footer-divider">|</span>
+    <a href="https://github.com/MarusFaulkner" target="_blank" rel="noopener">github.com/MarusFaulkner</a>
+    <span class="footer-divider">|</span>
+    Data persisted in browser localStorage
+  </div>
+</div>
+
+<!-- ADD NCR MODAL -->
+<div class="ov" id="modal" onclick="overlayClick(event)">
+  <div class="modal">
+    <div class="mh">
+      <div class="mh-left">
+        <h2>Add New Nonconformance Report</h2>
+        <p>All fields marked <span style="color:var(--red)">*</span> are required</p>
+      </div>
+      <button class="mc" onclick="closeModal()" aria-label="Close">&times;</button>
+    </div>
+    <div class="mb">
+
+      <div class="id-preview">
+        <span>&#128203;</span>
+        Auto-assigned: <strong id="id-preview">NCR-2026-011</strong>
+        &nbsp;&mdash;&nbsp; NCR will be timestamped on save
+      </div>
+
+      <!-- SECTION 1: IDENTIFICATION -->
+      <div class="fsec">
+        <div class="fsec-title"><div class="fsec-num">1</div> Identification</div>
+        <div class="fr">
+          <div class="fg">
+            <label class="fl">Sales Order <span class="req">*</span></label>
+            <input class="fc" id="f-so" type="text" placeholder="SO#10186457">
+            <div class="ferr" id="e-so">Sales order number is required</div>
+          </div>
+          <div class="fg">
+            <label class="fl">Component / Part <span class="req">*</span></label>
+            <input class="fc" id="f-comp" type="text" placeholder="Bushing H1">
+            <div class="ferr" id="e-comp">Component name is required</div>
+          </div>
+        </div>
+        <div class="fr">
+          <div class="fg">
+            <label class="fl">Drawing / Spec Number</label>
+            <input class="fc" id="f-drawing" type="text" placeholder="DTF-XXXXXXXXX or Spec Rev. B">
+            <div class="fhint">Reference drawing number or specification document</div>
+          </div>
+          <div class="fg">
+            <label class="fl">Date Found</label>
+            <input class="fc" id="f-date" type="date">
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION 2: NONCONFORMANCE DETAIL -->
+      <div class="fsec">
+        <div class="fsec-title"><div class="fsec-num">2</div> Nonconformance Detail</div>
+        <div class="fg">
+          <label class="fl">What was found <span class="req">*</span></label>
+          <textarea class="fc tall" id="f-desc" placeholder="Describe exactly what was found — include WHAT, WHERE on the unit, and HOW MUCH (measurements, quantities, location at clock position, etc.)&#10;&#10;Example: Paint damage on outer surface of bushing H1 — approximately 2-inch scratch at 3 o'clock position exposing bare metal substrate."></textarea>
+          <div class="ferr" id="e-desc">Nonconformance detail is required</div>
+          <div class="fhint">State the finding only — do not include causes or corrective actions here</div>
+        </div>
+        <div class="fg">
+          <label class="fl">Acceptance Criteria <span class="req">*</span></label>
+          <textarea class="fc" id="f-criteria" placeholder="State the specification value from the drawing or standard.&#10;&#10;Example: Uniform paint coverage required per drawing DTF-XXXXXXXXX — no bare metal exposed. Stud bolt length 10.0 mm +/- 0.2 mm per drawing."></textarea>
+          <div class="ferr" id="e-criteria">Acceptance criteria is required</div>
+          <div class="fhint">What does the drawing / spec say it must be? Never include rework instructions here</div>
+        </div>
+        <div class="fg">
+          <label class="fl">Photo Reference (Z Drive path)</label>
+          <input class="fc" id="f-photo" type="text" placeholder="Z:\Quality\NCR\2026\SO#10186457_BushingH1_PaintDamage_01.jpg">
+          <div class="fhint">Z: drive file path — include SO#, component, defect type, and sequence number</div>
+        </div>
+      </div>
+
+      <!-- SECTION 3: CLASSIFICATION & DISPOSITION -->
+      <div class="fsec">
+        <div class="fsec-title"><div class="fsec-num">3</div> Classification &amp; Disposition</div>
+        <div class="fr3">
+          <div class="fg">
+            <label class="fl">Severity</label>
+            <select class="fc" id="f-sev">
+              <option value="Minor">Minor</option>
+              <option value="Major" selected>Major</option>
+              <option value="Critical">Critical</option>
+            </select>
+          </div>
+          <div class="fg">
+            <label class="fl">Disposition</label>
+            <select class="fc" id="f-disp">
+              <option value="Pending" selected>Pending</option>
+              <option value="Accept As-Is">Accept As-Is</option>
+              <option value="Rework">Rework</option>
+              <option value="Scrap">Scrap</option>
+              <option value="Return to Vendor">Return to Vendor</option>
+              <option value="Use As-Is with Deviation">Use As-Is with Deviation</option>
+            </select>
+          </div>
+          <div class="fg">
+            <label class="fl">Status</label>
+            <select class="fc" id="f-stat">
+              <option value="Open" selected>Open</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Closed">Closed</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION 4: ROOT CAUSE & ASSIGNMENT -->
+      <div class="fsec">
+        <div class="fsec-title"><div class="fsec-num">4</div> Root Cause &amp; Assignment</div>
+        <div class="fg">
+          <label class="fl">Root Cause (if known)</label>
+          <textarea class="fc" id="f-rootcause" placeholder="Thinking error — SOP/procedure gap&#10;Action error — slip or lapse during execution&#10;Risk-based error — deliberate shortcut or habit&#10;&#10;Leave blank if root cause investigation is pending"></textarea>
+          <div class="fhint">Identify which of the three error categories applies — or leave blank for investigation later</div>
+        </div>
+        <div class="fg">
+          <label class="fl">Assigned To <span class="req">*</span></label>
+          <input class="fc" id="f-owner" type="text" placeholder="Production / Engineering / Purchasing / QA">
+          <div class="ferr" id="e-owner">Assigned department or person is required</div>
+        </div>
+      </div>
+
+    </div>
+    <div class="mf">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitNCR()">&#128203; Submit NCR</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toasts"></div>
+
+<script>
+const TODAY = new Date().toISOString().slice(0, 10);
+
+const SAMPLE = [
+  {id:'NCR-2026-001',salesOrder:'SO#10186457',component:'Bushing H1',drawingSpec:'DTF-BH1-2024-Rev.C',
+   description:'Paint damage on outer surface — approximately 2-inch scratch at 3 o\'clock position exposing bare metal substrate.',
+   acceptanceCriteria:'Uniform paint coverage required per drawing DTF-BH1-2024-Rev.C — no bare metal exposed. Finish: ANSI 61 gray, 3–5 mil DFT.',
+   photoRef:'Z:\\Quality\\NCR\\2026\\SO10186457_BushingH1_PaintDamage_01.jpg',
+   rootCause:'Action error — damage occurred during component movement. No lift guide was used. Fix: mandate lift guide SOP during bushing handling.',
+   severity:'Minor',disposition:'Rework',status:'Closed',dateFound:'2026-09-02',assignedTo:'Paint Dept',dateClosed:'2026-09-07'},
+
+  {id:'NCR-2026-002',salesOrder:'SO#10185610',component:'Radiator Bank',drawingSpec:'Packing List Item #01',
+   description:'Missing radiator unit — packing list requires quantity 4; only 3 units present during disassembly inspection. Missing unit cannot be located in crate shop or staging area.',
+   acceptanceCriteria:'Packing list item #01 specifies quantity: 4 radiator units. All line items must be received complete before inspection sign-off.',
+   photoRef:'Z:\\Quality\\NCR\\2026\\SO10185610_RadiatorBank_Missing_01.jpg',
+   rootCause:'',
+   severity:'Major',disposition:'Pending',status:'Open',dateFound:'2026-09-05',assignedTo:'Purchasing',dateClosed:null},
+
+  {id:'NCR-2026-003',salesOrder:'SO#10184042',component:'Conservator',drawingSpec:'Pressure Test Spec PT-2023-01',
+   description:'Pressure test failed — internal diaphragm leak detected at flange joint. Pressure applied: 5 PSI. Pressure at 8 minutes: 2 PSI. Drop of 3 PSI observed.',
+   acceptanceCriteria:'Per Pressure Test Spec PT-2023-01: pressure maintained at 5 PSI for minimum 10 minutes with zero pressure drop.',
+   photoRef:'Z:\\Quality\\NCR\\2026\\SO10184042_Conservator_PressureFail_01.jpg',
+   rootCause:'Thinking error — weld procedure for flanged joint not updated after design revision. Corrective action: revise weld SOP for conservator flange assembly.',
+   severity:'Critical',disposition:'Rework',status:'Closed',dateFound:'2026-08-20',assignedTo:'Welding Dept',dateClosed:'2026-08-25'},
+
+  {id:'NCR-2026-004',salesOrder:'SO#10186671',component:'Arrester Support',drawingSpec:'Assembly Drawing AD-10186671-Rev.A',
+   description:'Missing mounting hardware on arrester busbar pads — 4 of 8 required M12 bolts absent. Washer condition unverified for the 4 bolts present. Packing list item #23.',
+   acceptanceCriteria:'Per assembly drawing AD-10186671-Rev.A, packing list item #23: 8 × M12 bolts with corresponding flat washers and lock washers required at all arrester busbar pad positions.',
+   photoRef:'Z:\\Quality\\NCR\\2026\\SO10186671_ArresterSupport_MissingHW_01.jpg',
+   rootCause:'',
+   severity:'Major',disposition:'Pending',status:'In Progress',dateFound:'2026-09-15',assignedTo:'Production',dateClosed:null},
+
+  {id:'NCR-2026-005',salesOrder:'SO#10186457',component:'Stud Bolt Position #4',drawingSpec:'Drawing DTFXXXXXXXXX Dim. B4',
+   description:'Stud bolt length out of specification — actual measured length: 10.5 mm. Deviation from upper tolerance: +0.3 mm.',
+   acceptanceCriteria:'Per drawing DTFXXXXXXXXX, Dimension B4: stud bolt length 10.0 mm +/- 0.2 mm. Upper limit: 10.2 mm.',
+   photoRef:'Z:\\Quality\\NCR\\2026\\SO10186457_StudBolt4_Length_01.jpg',
+   rootCause:'Action error — machining operator did not verify final dimension against drawing tolerance callout. Corrective action: add in-process check to machining traveler.',
+   severity:'Minor',disposition:'Scrap',status:'Closed',dateFound:'2026-09-10',assignedTo:'Production',dateClosed:'2026-09-12'},
+
+  {id:'NCR-2026-006',salesOrder:'SO#10187141',component:'Conservator Gas Pipe',drawingSpec:'Torque Spec TQ-2024-G03',
+   description:'U-bolt loose on conservator gas pipe connection — torque verification failed. Actual torque: 18 Nm. Specified torque: 25 Nm +/- 2 Nm. Risk of movement or leak during shipping.',
+   acceptanceCriteria:'Per torque specification TQ-2024-G03: conservator gas pipe U-bolt torque = 25 Nm +/- 2 Nm (range: 23–27 Nm). Verify with calibrated torque wrench.',
+   photoRef:'Z:\\Quality\\NCR\\2026\\SO10187141_ConservatorGasPipe_Torque_01.jpg',
+   rootCause:'',
+   severity:'Major',disposition:'Rework',status:'In Progress',dateFound:'2026-09-20',assignedTo:'Production',dateClosed:null},
+
+  {id:'NCR-2026-007',salesOrder:'SO#10186671',component:'Tag #127',drawingSpec:'QMS Procedure SQMH0015 §4.3',
+   description:'Shipping identification tag not attached to component prior to packing — traceability gap identified during packing inspection. Cannot confirm component matches packing list without tag verification.',
+   acceptanceCriteria:'Per QMS procedure SQMH0015 §4.3: all components must have traceability tag affixed and verified before packing sign-off. Tag must include Sales Order, part number, and inspection status.',
+   photoRef:'Z:\\Quality\\NCR\\2026\\SO10186671_Tag127_MissingTag_01.jpg',
+   rootCause:'Action error — tag fell off during staging. Process gap: no secondary check on tag attachment before packing station handoff.',
+   severity:'Minor',disposition:'Accept As-Is',status:'Closed',dateFound:'2026-09-22',assignedTo:'QA',dateClosed:'2026-09-23'},
+
+  {id:'NCR-2026-008',salesOrder:'SO#10187905',component:'Winding Insulation',drawingSpec:'Visual Inspection Std VI-2022-04',
+   description:'Winding insulation shows visible deterioration — brown/amber discoloration banding observed on 3 of 12 insulation layers during in-tanking inspection. No physical damage confirmed.',
+   acceptanceCriteria:'Per visual inspection standard VI-2022-04: insulation layers must be free from discoloration, charring, or banding. Accepted condition: uniform cream/off-white color only.',
+   photoRef:'Z:\\Quality\\NCR\\2026\\SO10187905_WindingInsulation_Discolor_01.jpg',
+   rootCause:'',
+   severity:'Critical',disposition:'Pending',status:'Open',dateFound:'2026-10-01',assignedTo:'Engineering',dateClosed:null},
+
+  {id:'NCR-2026-009',salesOrder:'SO#10185610',component:'Radiator Support',drawingSpec:'Visual Inspection Std VI-2022-04',
+   description:'Surface rust found on horizontal arrester support busbar pads — 3 of 6 pads show rust formation. Rust depth: surface-level, no pitting observed. Paint condition below acceptance criteria.',
+   acceptanceCriteria:'Per visual inspection standard VI-2022-04: all structural surfaces must be free from rust, corrosion, and paint breakdown. Surface condition: clean, coated, no oxidation.',
+   photoRef:'Z:\\Quality\\NCR\\2026\\SO10185610_RadiatorSupport_Rust_01.jpg',
+   rootCause:'Risk-based error — component stored outdoors without protective covering between stages. Fix: enforce covered staging policy for all sub-assemblies.',
+   severity:'Minor',disposition:'Rework',status:'Closed',dateFound:'2026-09-05',assignedTo:'Production',dateClosed:'2026-09-07'},
+
+  {id:'NCR-2026-010',salesOrder:'SO#10187905',component:'Gasket Set',drawingSpec:'Packing List Item #76',
+   description:'Gasket quantity mismatch — packing list item #76 requires 12 gaskets (installation set + spare set). Only 9 gaskets present in packaging. Missing: 3 units. Gasket type: flange seal.',
+   acceptanceCriteria:'Per packing list item #76: Part No. BTP210057SH082 — quantity 12 required (6 installation + 6 spare). All items must match packing list before inspection sign-off.',
+   photoRef:'Z:\\Quality\\NCR\\2026\\SO10187905_GasketSet_Shortage_01.jpg',
+   rootCause:'',
+   severity:'Major',disposition:'Pending',status:'Open',dateFound:'2026-10-15',assignedTo:'Purchasing',dateClosed:null}
+];
+
+let state = {
+  ncrs: [],
+  filter: { search:'', status:'all', severity:'all', disp:'all', owner:'all' },
+  sort: { col:'dateFound', dir:'desc' },
+  expanded: null
+};
+let charts = { donut: null, bar: null };
+
+function init() {
+  try {
+    const saved = localStorage.getItem('ncr-dashboard-v2');
+    state.ncrs = saved ? JSON.parse(saved) : JSON.parse(JSON.stringify(SAMPLE));
+  } catch(e) { state.ncrs = JSON.parse(JSON.stringify(SAMPLE)); }
+  renderAll();
+}
+
+function save() {
+  try { localStorage.setItem('ncr-dashboard-v2', JSON.stringify(state.ncrs)); } catch(e) {}
+}
+
+function resetData() {
+  if (!confirm('Reset to sample data? All custom NCRs will be removed.')) return;
+  state.ncrs = JSON.parse(JSON.stringify(SAMPLE));
+  state.expanded = null;
+  save(); renderAll();
+  toast('Sample data restored — 10 NCRs loaded', 'success');
+}
+
+function renderAll() { renderStats(); renderCharts(); renderTable(); }
+
+function renderStats() {
+  const d = state.ncrs;
+  document.getElementById('s-total').textContent = d.length;
+  document.getElementById('s-open').textContent = d.filter(n => n.status==='Open').length;
+  document.getElementById('s-prog').textContent = d.filter(n => n.status==='In Progress').length;
+  document.getElementById('s-closed').textContent = d.filter(n => n.status==='Closed').length;
+
+  const overdueCount = d.filter(n => n.status!=='Closed' && daysOpen(n.dateFound, null)>30).length;
+  document.getElementById('s-overdue').textContent = overdueCount;
+
+  const critOpen = d.filter(n => n.severity==='Critical' && n.status!=='Closed').length;
+  document.getElementById('s-crit').textContent = critOpen;
+  const critCard = document.getElementById('crit-card');
+  const critAlert = document.getElementById('crit-alert');
+  if (critOpen > 0) {
+    critCard.classList.add('is-alert');
+    critAlert.style.display = 'block';
+  } else {
+    critCard.classList.remove('is-alert');
+    critAlert.style.display = 'none';
+  }
+
+  // Populate Assigned To filter dynamically
+  const owners = [...new Set(d.map(n => n.assignedTo).filter(Boolean))].sort();
+  const ownerSel = document.getElementById('owner-filter');
+  const curOwner = ownerSel.value;
+  ownerSel.innerHTML = '<option value="all">All assigned to</option>' +
+    owners.map(o => `<option value="${o}"${o===curOwner?' selected':''}>${o}</option>`).join('');
+}
+
+function getLast6Months() {
+  const r = [], ref = new Date();
+  for (let i=5; i>=0; i--) {
+    const d = new Date(ref.getFullYear(), ref.getMonth()-i, 1);
+    r.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'));
+  }
+  return r;
+}
+
+function fmtMonth(m) {
+  const [y,mo] = m.split('-');
+  const names=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return names[parseInt(mo)-1]+" '"+y.slice(2);
+}
+
+function renderCharts() {
+  const d = state.ncrs;
+  const counts = {
+    Open: d.filter(n=>n.status==='Open').length,
+    'In Progress': d.filter(n=>n.status==='In Progress').length,
+    Closed: d.filter(n=>n.status==='Closed').length
+  };
+  const tip = {backgroundColor:'#1e293b',titleColor:'#f1f5f9',bodyColor:'#94a3b8',borderColor:'rgba(148,163,184,.2)',borderWidth:1};
+
+  if (charts.donut) {
+    charts.donut.data.datasets[0].data = [counts.Open, counts['In Progress'], counts.Closed];
+    charts.donut.update();
+  } else {
+    charts.donut = new Chart(document.getElementById('donut-chart'), {
+      type:'doughnut',
+      data:{labels:['Open','In Progress','Closed'],datasets:[{data:[counts.Open,counts['In Progress'],counts.Closed],backgroundColor:['#ef4444','#f59e0b','#22c55e'],borderWidth:0,hoverOffset:5}]},
+      options:{responsive:true,maintainAspectRatio:false,cutout:'68%',plugins:{tooltip:tip,legend:{position:'bottom',labels:{color:'#94a3b8',font:{size:12},padding:14,boxWidth:10,boxHeight:10}}}}
+    });
+  }
+
+  const months = getLast6Months();
+  const gm = s => s ? s.slice(0,7) : '';
+  const minor = months.map(m=>d.filter(n=>gm(n.dateFound)===m&&n.severity==='Minor').length);
+  const major = months.map(m=>d.filter(n=>gm(n.dateFound)===m&&n.severity==='Major').length);
+  const crit  = months.map(m=>d.filter(n=>gm(n.dateFound)===m&&n.severity==='Critical').length);
+  const gc='rgba(148,163,184,.07)', tc={color:'#64748b',font:{size:11}};
+
+  if (charts.bar) {
+    charts.bar.data.labels = months.map(fmtMonth);
+    charts.bar.data.datasets[0].data = minor;
+    charts.bar.data.datasets[1].data = major;
+    charts.bar.data.datasets[2].data = crit;
+    charts.bar.update();
+  } else {
+    charts.bar = new Chart(document.getElementById('bar-chart'), {
+      type:'bar',
+      data:{
+        labels:months.map(fmtMonth),
+        datasets:[
+          {label:'Minor',data:minor,backgroundColor:'#3b82f6',borderRadius:3},
+          {label:'Major',data:major,backgroundColor:'#f59e0b',borderRadius:3},
+          {label:'Critical',data:crit,backgroundColor:'#ef4444',borderRadius:3}
+        ]
+      },
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        scales:{x:{stacked:true,grid:{color:gc},ticks:tc},y:{stacked:true,beginAtZero:true,grid:{color:gc},ticks:{...tc,stepSize:1}}},
+        plugins:{tooltip:tip,legend:{position:'top',align:'end',labels:{color:'#94a3b8',font:{size:11},padding:10,boxWidth:10,boxHeight:10}}}
+      }
+    });
+  }
+}
+
+function getFiltered() {
+  const {search,status,severity,disp,owner} = state.filter;
+  const q = search.toLowerCase();
+  return state.ncrs.filter(n =>
+    (!q || [n.id,n.salesOrder,n.component,n.drawingSpec,n.description,n.assignedTo,n.acceptanceCriteria].some(v=>(v||'').toLowerCase().includes(q))) &&
+    (status==='all' || n.status===status) &&
+    (severity==='all' || n.severity===severity) &&
+    (disp==='all' || n.disposition===disp) &&
+    (owner==='all' || n.assignedTo===owner)
+  );
+}
+
+function getSorted(data) {
+  const {col,dir} = state.sort;
+  return [...data].sort((a,b) => {
+    const av=a[col]||'', bv=b[col]||'';
+    return dir==='asc' ? (av<bv?-1:av>bv?1:0) : (av>bv?-1:av<bv?1:0);
+  });
+}
+
+function daysOpen(found, closed) {
+  const s=new Date(found), e=closed?new Date(closed):new Date(TODAY);
+  return Math.max(0,Math.floor((e-s)/86400000));
+}
+
+function dispClass(d) {
+  return {Pending:'disp-pending','Accept As-Is':'disp-accept',Rework:'disp-rework',Scrap:'disp-scrap','Return to Vendor':'disp-return','Use As-Is with Deviation':'disp-deviation'}[d]||'disp-pending';
+}
+
+function renderTable() {
+  const filtered = getSorted(getFiltered());
+  const tbody = document.getElementById('tbody');
+  document.getElementById('fcount').textContent = `Showing ${filtered.length} of ${state.ncrs.length} NCRs`;
+
+  if (!filtered.length) {
+    tbody.innerHTML = `<tr><td colspan="11"><div class="empty"><div class="empty-icon">&#128203;</div><div class="empty-title">No NCRs match your filters</div><div style="font-size:13px;color:var(--text3)">Try a different search or clear filters</div></div></td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(n => {
+    const days = daysOpen(n.dateFound, n.status==='Closed'?n.dateClosed:null);
+    const dpC = n.status!=='Closed'
+      ? (days>30?'urg':days>14?'aging':days>7?'warn':'')
+      : '';
+    const isExp = state.expanded===n.id;
+    const sevC = {Minor:'b-minor',Major:'b-major',Critical:'b-critical'}[n.severity]||'';
+    const stC = {Open:'b-open','In Progress':'b-prog',Closed:'b-closed'}[n.status]||'';
+    const dc = dispClass(n.disposition||'Pending');
+
+    const expSection = isExp ? `<tr class="exp-row"><td colspan="11"><div class="exp-content">
+        <div class="exp-grid">
+          <div class="exp-section full">
+            <div class="exp-label"><div class="exp-label-dot" style="background:#ef4444"></div>Nonconformance Detail</div>
+            <div class="exp-text">${n.description}</div>
+          </div>
+          <div class="exp-section">
+            <div class="exp-label"><div class="exp-label-dot" style="background:#22c55e"></div>Acceptance Criteria</div>
+            <div class="exp-text">${n.acceptanceCriteria||'<span style="color:var(--text3);font-style:italic">Not specified</span>'}</div>
+          </div>
+          <div class="exp-section">
+            <div class="exp-label"><div class="exp-label-dot" style="background:#a78bfa"></div>Root Cause</div>
+            <div class="exp-text">${n.rootCause||'<span style="color:var(--text3);font-style:italic">Pending investigation</span>'}</div>
+          </div>
+          ${n.photoRef?`<div class="exp-section full">
+            <div class="exp-label"><div class="exp-label-dot" style="background:#60a5fa"></div>Photo Documentation (Z Drive)</div>
+            <div class="photo-ref">&#128247; ${n.photoRef}</div>
+          </div>`:''}
+        </div>
+      </div></td></tr>` : '';
+
+    return `<tr class="data-row ${isExp?'is-exp':''}" onclick="toggleRow('${n.id}')">
+        <td class="nid">${n.id}</td>
+        <td>${n.salesOrder}</td>
+        <td class="comp" title="${n.component}">${n.component}</td>
+        <td style="font-size:11px;color:var(--text3);font-family:monospace">${(n.drawingSpec||'—').substring(0,22)}</td>
+        <td><span class="badge ${sevC}">${n.severity}</span></td>
+        <td><span class="disp-pill ${dc}">${n.disposition||'Pending'}</span></td>
+        <td><span class="badge ${stC}">${n.status}</span></td>
+        <td>${n.dateFound}</td>
+        <td><span class="dp ${dpC}">${days}d</span></td>
+        <td>${n.assignedTo}</td>
+        <td onclick="event.stopPropagation()"><button class="ab del" title="Delete NCR" onclick="delNCR('${n.id}')">&#128465;</button></td>
+      </tr>${expSection}`;
+  }).join('');
+}
+
+function toggleRow(id) { state.expanded = state.expanded===id ? null : id; renderTable(); }
+
+function setSort(col) {
+  state.sort.dir = state.sort.col===col ? (state.sort.dir==='asc'?'desc':'asc') : 'asc';
+  state.sort.col = col;
+  document.querySelectorAll('thead th').forEach(th => {
+    th.classList.remove('sorted');
+    const si = th.querySelector('.si');
+    if (si) si.textContent = '\u2195';
+  });
+  const th = document.querySelector(`[data-col="${col}"]`);
+  if (th) { th.classList.add('sorted'); th.querySelector('.si').textContent = state.sort.dir==='asc'?'\u2191':'\u2193'; }
+  renderTable();
+}
+
+function genId() {
+  const nums = state.ncrs.map(n=>parseInt(n.id.replace('NCR-2026-',''))||0).filter(Boolean);
+  return 'NCR-2026-'+String((nums.length?Math.max(...nums):0)+1).padStart(3,'0');
+}
+
+function openModal() {
+  document.getElementById('modal').classList.add('open');
+  document.getElementById('id-preview').textContent = genId();
+  document.getElementById('f-date').value = TODAY;
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+  const ids = ['f-so','f-comp','f-drawing','f-desc','f-criteria','f-photo','f-rootcause','f-owner'];
+  ids.forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  document.getElementById('f-sev').value='Major';
+  document.getElementById('f-disp').value='Pending';
+  document.getElementById('f-stat').value='Open';
+  ['so','comp','desc','criteria','owner'].forEach(id => document.getElementById('e-'+id).classList.remove('show'));
+}
+
+function overlayClick(e) { if(e.target===document.getElementById('modal')) closeModal(); }
+
+function submitNCR() {
+  const required = {so:'f-so',comp:'f-comp',desc:'f-desc',criteria:'f-criteria',owner:'f-owner'};
+  let ok=true; const vals={};
+  Object.entries(required).forEach(([k,id]) => {
+    const v=document.getElementById(id).value.trim();
+    vals[k]=v;
+    const err=document.getElementById('e-'+k);
+    if(!v){err.classList.add('show');ok=false;}else err.classList.remove('show');
+  });
+  if(!ok){toast('Please fill all required fields','error');return;}
+  const status=document.getElementById('f-stat').value;
+  const dateFound=document.getElementById('f-date').value;
+  const ncr={
+    id:genId(),salesOrder:vals.so,component:vals.comp,
+    drawingSpec:document.getElementById('f-drawing').value.trim(),
+    description:vals.desc,
+    acceptanceCriteria:vals.criteria,
+    photoRef:document.getElementById('f-photo').value.trim(),
+    rootCause:document.getElementById('f-rootcause').value.trim(),
+    severity:document.getElementById('f-sev').value,
+    disposition:document.getElementById('f-disp').value,
+    status,dateFound,
+    assignedTo:vals.owner,
+    dateClosed:status==='Closed'?dateFound:null
+  };
+  state.ncrs.unshift(ncr);
+  save(); closeModal(); renderAll();
+  toast(ncr.id+' submitted successfully','success');
+}
+
+function delNCR(id) {
+  if(!confirm(`Delete ${id}?\n\nThis action cannot be undone.`)) return;
+  state.ncrs=state.ncrs.filter(n=>n.id!==id);
+  if(state.expanded===id) state.expanded=null;
+  save(); renderAll();
+  toast(id+' deleted','error');
+}
+
+function exportCSV() {
+  const data=getSorted(getFiltered());
+  const hdrs=['NCR Number','Sales Order','Component','Drawing / Spec','Severity','Disposition','Status','Date Found','Days Open','Assigned To','Date Closed','Nonconformance Detail','Acceptance Criteria','Photo Reference (Z Drive)','Root Cause'];
+  const esc=v=>'"'+(v||'').replace(/"/g,'""')+'"';
+  const rows=data.map(n=>[
+    n.id,n.salesOrder,n.component,n.drawingSpec||'',
+    n.severity,n.disposition||'Pending',n.status,n.dateFound,
+    daysOpen(n.dateFound,n.status==='Closed'?n.dateClosed:null),
+    n.assignedTo,n.dateClosed||'',
+    esc(n.description),esc(n.acceptanceCriteria),esc(n.photoRef),esc(n.rootCause)
+  ]);
+  const csv=[hdrs.join(','),...rows.map(r=>r.join(','))].join('\n');
+  const a=Object.assign(document.createElement('a'),{
+    href:URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'})),
+    download:'ncr-report-'+TODAY+'.csv'
+  });
+  a.click();
+  toast('CSV exported — '+data.length+' NCRs · '+hdrs.length+' columns','success');
+}
+
+function toast(msg,type) {
+  const el=Object.assign(document.createElement('div'),{
+    className:'toast '+type,
+    innerHTML:`<div class="tdot"></div>${msg}`
+  });
+  document.getElementById('toasts').appendChild(el);
+  setTimeout(()=>{
+    el.style.cssText='opacity:0;transform:translateX(16px);transition:all .3s';
+    setTimeout(()=>el.remove(),320);
+  },3000);
+}
+
+document.getElementById('search').addEventListener('input',e=>{state.filter.search=e.target.value;renderTable();});
+document.getElementById('status-filter').addEventListener('change',e=>{state.filter.status=e.target.value;renderTable();});
+document.getElementById('severity-filter').addEventListener('change',e=>{state.filter.severity=e.target.value;renderTable();});
+document.getElementById('disp-filter').addEventListener('change',e=>{state.filter.disp=e.target.value;renderTable();});
+document.getElementById('owner-filter').addEventListener('change',e=>{state.filter.owner=e.target.value;renderTable();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
+
+init();
+</script>
+</body>
+</html>
