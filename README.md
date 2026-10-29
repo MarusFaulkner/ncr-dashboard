@@ -2,6 +2,10 @@
 
 > **Nonconformance Report Tracker** — a browser-based quality management tool designed with ISO 9001:2015 concepts in mind.
 
+## 🌐 Live Application
+
+**[Launch the NCR Dashboard](https://MarusFaulkner.github.io/ncr-dashboard/)**
+
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-GitHub%20Pages-blue?style=flat-square)](https://MarusFaulkner.github.io/ncr-dashboard)
 [![HTML](https://img.shields.io/badge/Built%20With-HTML%20%2F%20JS-orange?style=flat-square)](https://github.com/MarusFaulkner/ncr-dashboard)
 [![Chart.js](https://img.shields.io/badge/Charts-Chart.js%204.4-pink?style=flat-square)](https://www.chartjs.org/)
